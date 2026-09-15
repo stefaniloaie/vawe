@@ -1,4 +1,4 @@
-"""Small server-side SEO primitives shared by every public Vawe route."""
+"""Small server-side SEO primitives shared by every public Signal Atlas route."""
 from __future__ import annotations
 
 import json
@@ -23,6 +23,8 @@ def page_meta(request: HttpRequest, *, path: str, title: str, description: str, 
         "description": description,
         "canonical": canonical,
         "social_image": image,
+        "social_image_alt": "Signal Atlas live ocean, weather, earthquake and space data explorer",
+        "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
         "json_ld": json.dumps(schemas, separators=(",", ":")),
     }
 

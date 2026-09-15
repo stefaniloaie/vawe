@@ -14,9 +14,13 @@ urlpatterns = [
     path("waves", views.waves, name="waves"),
     path("waves/<str:region>", views.region_page, name="region"),
     path("buoys/<str:station_slug>", views.buoy_page, name="buoy-page"),
+    path("ocean/waves/<str:station_id>", views.legacy_ocean_buoy, name="legacy-ocean-buoy"),
     path("game", views.game_page, name="game"),
     path("game/daily/<str:day>", views.daily_game_page, name="daily-game"),
     path("earthquakes", views.earthquake_page, name="earthquakes"),
+    path("now", views.now_page, name="now"),
+    path("events/<str:event_id>", views.event_page, name="event-page"),
+    path("learn", views.learn_index, name="learn-index"),
     path("learn/<str:article>", views.learn_page, name="learn"),
 ]
 

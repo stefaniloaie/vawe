@@ -107,9 +107,9 @@ export const DailySwellDuel: React.FC = () => {
 
   const share = async () => {
     const url = window.location.href;
-    const text = `I scored ${score}/${challenge?.rounds.length || 5} in today’s Vawe Swell Duel using recorded NOAA buoy observations. Can you beat me?`;
+    const text = `I scored ${score}/${challenge?.rounds.length || 5} in today’s Signal Atlas Swell Duel using recorded NOAA buoy observations. Can you beat me?`;
     try {
-      if (navigator.share) await navigator.share({ title: 'Vawe Swell Duel', text, url });
+      if (navigator.share) await navigator.share({ title: 'Signal Atlas Swell Duel', text, url });
       else await navigator.clipboard.writeText(`${text} ${url}`);
     } catch {
       // Dismissing a native share dialog is not an application error.
@@ -136,7 +136,7 @@ export const DailySwellDuel: React.FC = () => {
     }
   };
 
-  if (error) return <div className="mx-auto max-w-3xl rounded-2xl border border-amber-400/35 bg-amber-950/30 p-6 font-mono text-amber-100"><h2 className="font-black">Daily challenge unavailable</h2><p className="mt-2 text-sm">{error} Vawe does not create replacement questions without observed NOAA station data.</p></div>;
+  if (error) return <div className="mx-auto max-w-3xl rounded-2xl border border-amber-400/35 bg-amber-950/30 p-6 font-mono text-amber-100"><h2 className="font-black">Daily challenge unavailable</h2><p className="mt-2 text-sm">{error} Signal Atlas does not create replacement questions without observed NOAA station data.</p></div>;
   if (!challenge || !activeRound) return <div className="flex min-h-80 items-center justify-center font-mono text-cyan-100/70"><Waves className="mr-3 h-5 w-5 animate-pulse" />Recording today’s NOAA buoy snapshot…</div>;
 
   const correct = guess ? answers[answers.length - 1] : null;

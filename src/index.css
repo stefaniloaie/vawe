@@ -51,6 +51,7 @@
 }
 
 .ocean-page .ocean-control-surface,
+.ocean-page #wave-area-rankings,
 .ocean-page #wave-chart-container,
 .ocean-page #event-timeline-container,
 .ocean-page #source-transparency-card {
@@ -80,51 +81,107 @@
   border-color: rgba(224, 196, 245, 0.16) !important;
 }
 
-/* Weather has its own low-sun palette: warm weather-light above a deep
-   blue-gray horizon. It intentionally does not reuse the Ocean dashboard. */
+/* Weather uses a clear, cool daylight palette distinct from the Ocean dashboard. */
 .weather-page {
+  background-color: #0b2130;
   background-image:
-    radial-gradient(circle at 82% -4%, rgba(251, 184, 105, 0.25), transparent 26rem),
-    radial-gradient(circle at 8% 14%, rgba(244, 114, 138, 0.15), transparent 24rem),
-    linear-gradient(180deg, #30202a 0%, #172838 40rem, #0c1824 100%);
+    radial-gradient(circle at 82% -4%, rgba(199, 229, 240, 0.24), transparent 26rem),
+    radial-gradient(circle at 8% 14%, rgba(111, 181, 215, 0.15), transparent 24rem),
+    linear-gradient(180deg, rgba(14, 42, 59, 0.96) 0%, rgba(12, 33, 47, 0.9) 43rem, rgba(7, 20, 31, 0.96) 100%),
+    url('/images/weather-cinematic-hero.jpg');
+  background-position: center top, center top, center top, center top;
+  background-size: auto, auto, auto, cover;
+  background-repeat: no-repeat;
 }
 
 .weather-page .cinematic-page-glow {
   background:
-    linear-gradient(180deg, rgba(255, 218, 160, 0.1), transparent 65%),
-    repeating-linear-gradient(90deg, transparent 0, transparent 95px, rgba(255, 204, 140, 0.035) 96px);
+    linear-gradient(180deg, rgba(211, 238, 247, 0.1), transparent 65%),
+    repeating-linear-gradient(90deg, transparent 0, transparent 95px, rgba(172, 218, 236, 0.035) 96px);
 }
 
 .weather-page > header {
-  background: rgba(40, 26, 37, 0.88) !important;
-  border-color: rgba(255, 204, 150, 0.16) !important;
+  background: rgba(16, 36, 53, 0.88) !important;
+  border-color: rgba(189, 224, 238, 0.16) !important;
 }
 
 .weather-page #category-navigation-bar,
 .weather-page footer {
-  border-color: rgba(255, 204, 150, 0.14) !important;
+  border-color: rgba(189, 224, 238, 0.14) !important;
 }
 
 .weather-page .telemetry-extension-shell {
-  background: linear-gradient(140deg, rgba(48, 31, 44, 0.95), rgba(18, 37, 53, 0.93)) !important;
-  border-color: rgba(255, 201, 132, 0.22) !important;
+  background: linear-gradient(140deg, rgba(22, 46, 63, 0.95), rgba(15, 37, 53, 0.93)) !important;
+  border-color: rgba(174, 219, 236, 0.22) !important;
   box-shadow: 0 28px 75px rgba(14, 9, 19, 0.38);
 }
 
 .weather-page .telemetry-extension-shell .bg-zinc-900,
 .weather-page .telemetry-extension-shell .bg-zinc-950 {
-  background-color: rgba(35, 30, 48, 0.78) !important;
+  background-color: rgba(18, 43, 59, 0.78) !important;
 }
 
 .weather-page .telemetry-extension-shell .border-zinc-800,
 .weather-page .telemetry-extension-shell .border-zinc-850,
 .weather-page .telemetry-extension-shell .border-zinc-900 {
-  border-color: rgba(255, 201, 132, 0.18) !important;
+  border-color: rgba(174, 219, 236, 0.18) !important;
 }
 
 .weather-page .telemetry-extension-shell .text-cyan-400,
 .weather-page .telemetry-extension-shell .text-cyan-100 {
-  color: #ffd28c !important;
+  color: #b9e6f4 !important;
+}
+
+/* Space keeps its own low-light palette and uses the supplied orbital image as
+   a quiet layer behind the data, rather than treating it as an alert state. */
+.space-page {
+  background-color: #050a16;
+  background-image:
+    radial-gradient(circle at 82% -5%, rgba(79, 182, 217, 0.2), transparent 27rem),
+    radial-gradient(circle at 7% 16%, rgba(42, 108, 182, 0.16), transparent 25rem),
+    linear-gradient(180deg, rgba(4, 13, 32, 0.94) 0%, rgba(5, 18, 37, 0.9) 43rem, rgba(3, 9, 22, 0.97) 100%),
+    url('/images/space-cinematic-hero.jpg');
+  background-position: center top, center top, center top, center top;
+  background-size: auto, auto, auto, cover;
+  background-repeat: no-repeat;
+}
+
+.space-page .cinematic-page-glow {
+  background:
+    linear-gradient(180deg, rgba(101, 207, 239, 0.08), transparent 65%),
+    repeating-linear-gradient(90deg, transparent 0, transparent 95px, rgba(128, 215, 239, 0.03) 96px);
+}
+
+.space-page > header {
+  background: rgba(5, 14, 32, 0.88) !important;
+  border-color: rgba(141, 218, 241, 0.16) !important;
+}
+
+.space-page #category-navigation-bar,
+.space-page footer {
+  border-color: rgba(141, 218, 241, 0.14) !important;
+}
+
+.space-page .telemetry-extension-shell {
+  background: linear-gradient(140deg, rgba(6, 18, 42, 0.95), rgba(8, 41, 61, 0.92)) !important;
+  border-color: rgba(125, 210, 237, 0.22) !important;
+  box-shadow: 0 28px 75px rgba(0, 3, 14, 0.46);
+}
+
+.space-page .telemetry-extension-shell .bg-zinc-900,
+.space-page .telemetry-extension-shell .bg-zinc-950 {
+  background-color: rgba(6, 25, 49, 0.78) !important;
+}
+
+.space-page .telemetry-extension-shell .border-zinc-800,
+.space-page .telemetry-extension-shell .border-zinc-850,
+.space-page .telemetry-extension-shell .border-zinc-900 {
+  border-color: rgba(125, 210, 237, 0.18) !important;
+}
+
+.space-page .telemetry-extension-shell .text-cyan-400,
+.space-page .telemetry-extension-shell .text-cyan-100 {
+  color: #bcecf7 !important;
 }
 
 .cinematic-hero-image {

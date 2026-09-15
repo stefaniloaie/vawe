@@ -19,7 +19,7 @@ from .models import DailyChallenge
 
 CACHE_TTL_SECONDS = 60
 GAME_CACHE_TTL_SECONDS = 45
-NOAA_USER_AGENT = "VAWE/1.0 (Public Data Visualizer)"
+NOAA_USER_AGENT = "SignalAtlas/1.0 (Public Data Visualizer)"
 
 CATEGORY_CATALOG = {
     "ocean": {
@@ -90,11 +90,19 @@ BUOY_STATIONS = [
 REGIONS = {
     "california": {"name": "California", "description": "NOAA and CDIP buoy observations off the California coast."},
     "hawaii": {"name": "Hawaii", "description": "Open-ocean swell observations northwest of Hawaii."},
+    "pacific-northwest": {"name": "Pacific Northwest", "description": "Deep-ocean NOAA buoy observations west of Washington and the Pacific Northwest coast."},
+    "atlantic": {"name": "Atlantic", "description": "Open Atlantic NOAA buoy observations east of the U.S. coast and Gulf Stream."},
     "new-england": {"name": "New England", "description": "North Atlantic and Gulf of Maine buoy observations."},
     "gulf-of-mexico": {"name": "Gulf of Mexico", "description": "Deep Gulf buoy observations for tropical and southern wave systems."},
 }
 
 HIGH_WAVE_THRESHOLD_METERS = 3.0
+RANKING_WINDOWS = {
+    "1H": timedelta(hours=1),
+    "6H": timedelta(hours=6),
+    "24H": timedelta(hours=24),
+    "7D": timedelta(days=7),
+}
 
 
 class ProviderError(Exception):
@@ -316,6 +324,70 @@ def game_buoys_payload() -> dict[str, Any]:
     return payload
 
 
+def wave_rankings_payload(window: str = "24H") -> dict[str, Any]:
+    """Rank the curated buoy locations by their observed peak in a time window.
+
+    The result deliberately keeps the underlying station and peak timestamp so a
+    visitor can tell this is a comparison of observed buoy records—not an ocean
+    forecast, warning, or an estimated area-wide average.
+    """
+    normalized_window = window.upper()
+    if normalized_window not in RANKING_WINDOWS:
+        raise ValueError("window must be one of 1H, 6H, 24H, or 7D")
+
+    cache_key = f"wave_rankings_{normalized_window}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    now = datetime.now(timezone.utc)
+    window_start = now - RANKING_WINDOWS[normalized_window]
+
+    def rank_station(station: dict[str, Any]) -> dict[str, Any] | None:
+        try:
+            payload = buoy_payload(station["id"])
+        except ProviderError:
+            return None
+
+        measurements = [
+            measurement for measurement in payload.get("measurements", [])
+            if _observation_time(measurement) >= window_start
+        ]
+        if not measurements:
+            return None
+
+        peak = max(measurements, key=lambda measurement: measurement["value"])
+        latest = measurements[-1]
+        return {
+            "station": station,
+            "peakWaveHeight": peak["value"],
+            "unit": peak["unit"],
+            "peakObservedAt": peak["timestamp"],
+            "latestObservation": latest["timestamp"],
+            "observationsInWindow": len(measurements),
+            "isDelayed": payload.get("isDelayed", True),
+            "sourceUrl": payload["dataSourceUrl"],
+        }
+
+    # Public station feeds are fetched with bounded concurrency and each feed is
+    # separately cached by buoy_payload, so changing the display window does not
+    # create an uncontrolled burst of requests to NOAA.
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        rankings = [item for item in executor.map(rank_station, BUOY_STATIONS) if item is not None]
+
+    rankings.sort(key=lambda item: (item["peakWaveHeight"], item["peakObservedAt"]), reverse=True)
+    result = {
+        "window": normalized_window,
+        "windowStart": window_start.isoformat().replace("+00:00", "Z"),
+        "fetchedAt": now.isoformat().replace("+00:00", "Z"),
+        "source": "NOAA National Data Buoy Center",
+        "stationsReporting": len(rankings),
+        "rankings": rankings[:3],
+    }
+    cache.set(cache_key, result, CACHE_TTL_SECONDS)
+    return result
+
+
 def _daily_round_snapshot(buoy: dict[str, Any]) -> dict[str, Any]:
     """Keep only factual, displayable values from the observed game buoy response."""
     return {
@@ -467,6 +539,7 @@ def earthquakes_payload() -> dict[str, Any]:
         if epoch_ms is None or properties.get("mag") is None:
             continue
         measurements.append({
+            "id": feature.get("id"),
             "timestamp": datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc).isoformat().replace("+00:00", "Z"),
             "value": properties["mag"],
             "unit": "M",

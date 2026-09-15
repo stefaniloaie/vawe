@@ -30,6 +30,8 @@ export interface LeaderboardEntry {
 
 export interface StationInfo {
   id: string;
+  slug?: string;
+  region?: string;
   name: string;
   location: string;
   lat: number;
@@ -99,4 +101,84 @@ export interface BuoyApiResponse {
   }>;
   error?: string;
   isUnavailable?: boolean;
+}
+
+export interface WaveAreaRanking {
+  station: StationInfo & {
+    slug?: string;
+    region?: string;
+  };
+  peakWaveHeight: number;
+  unit: string;
+  peakObservedAt: string;
+  latestObservation: string;
+  observationsInWindow: number;
+  isDelayed: boolean;
+  sourceUrl: string;
+}
+
+export interface WaveRankingsResponse {
+  window: TimeRange;
+  windowStart: string;
+  fetchedAt: string;
+  source: string;
+  stationsReporting: number;
+  rankings: WaveAreaRanking[];
+}
+
+export type NowDomain = 'EARTH' | 'OCEAN' | 'WEATHER' | 'AIR' | 'SHIPS';
+export type NowEventStatus = 'LIVE' | 'RECENT';
+
+export interface NowProviderStatus {
+  domain: NowDomain;
+  status: 'live' | 'unavailable' | 'forecast_only';
+  source: string;
+  sourceUrl?: string | null;
+  retrievedAt?: string | null;
+  message?: string | null;
+  eventCount?: number | null;
+}
+
+export interface NowEvent {
+  id: string;
+  status: NowEventStatus;
+  title: string;
+  summary: string;
+  timestamp: string;
+  latitude: number;
+  longitude: number;
+  location: string;
+  domains: NowDomain[];
+  significance: number;
+  radiusKm: number;
+  timeWindowMinutes: number;
+  nearbyObservations: Partial<Record<NowDomain, number>>;
+  sources: Array<{ name: string; url: string }>;
+  correlationNote: string;
+  events?: Array<{
+    id: string;
+    domain: NowDomain;
+    title: string;
+    summary: string;
+    status: NowEventStatus;
+    timestamp: string;
+    location: string;
+    source: string;
+    source_url: string;
+    retrieved_at: string;
+    observation: NormalizedObservation;
+    metadata: Record<string, unknown>;
+  }>;
+}
+
+export interface NowFeedResponse {
+  updatedAt: string;
+  events: NowEvent[];
+  providers: NowProviderStatus[];
+  counts: Partial<Record<NowDomain, number | null>>;
+  activeEventCount: number;
+  activity: Array<{ id: string; timestamp: string; kind: 'event' | 'source'; message: string; eventId?: string; source?: string | null }>;
+  isQuiet: boolean;
+  correlation: { radiusKm: number; timeWindowMinutes: number; method: string };
+  filters?: { domain: 'ALL' | NowDomain; status: 'ALL' | NowEventStatus; multi: boolean };
 }

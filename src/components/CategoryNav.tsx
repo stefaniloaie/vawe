@@ -1,11 +1,14 @@
 import React from 'react';
 import { CategoryId } from '../types';
 import { CATEGORY_DEFINITIONS } from '../sources/SourceRegistry';
-import { Waves, Plane, Ship, Activity, Wind, Car, Orbit, Gamepad2, Flame } from 'lucide-react';
+import { Waves, Plane, Ship, Activity, Wind, Car, Orbit, Gamepad2, Radio } from 'lucide-react';
 
 interface CategoryNavProps {
   activeCategory: CategoryId;
   onSelectCategory: (cat: CategoryId) => void;
+  isNowActive?: boolean;
+  isSpecialRoute?: boolean;
+  onSelectNow?: () => void;
 }
 
 const CATEGORY_PATHS: Partial<Record<CategoryId, string>> = {
@@ -27,13 +30,28 @@ const CATEGORY_ICONS: Record<CategoryId, React.ReactNode> = {
 
 export const CategoryNav: React.FC<CategoryNavProps> = ({
   activeCategory,
-  onSelectCategory
+  onSelectCategory,
+  isNowActive = false,
+  isSpecialRoute = false,
+  onSelectNow
 }) => {
+  const preferredOrder: CategoryId[] = ['OCEAN', 'AIR', 'SHIPS', 'EARTH', 'WEATHER', 'GAME', 'SPACE', 'TRAFFIC'];
+  const categories = preferredOrder.map((id) => CATEGORY_DEFINITIONS.find((category) => category.id === id)).filter((category): category is typeof CATEGORY_DEFINITIONS[number] => Boolean(category));
   return (
     <nav id="category-navigation-bar" className="w-full overflow-x-auto scrollbar-none py-2 border-b border-zinc-900/80">
       <div className="flex items-center gap-1 sm:gap-2 min-w-max">
-        {CATEGORY_DEFINITIONS.map(cat => {
-          const isActive = activeCategory === cat.id;
+        <button
+          type="button"
+          onClick={onSelectNow}
+          className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-mono font-black tracking-wider transition-all ${isNowActive ? 'border-cyan-200/55 bg-cyan-300/15 text-cyan-50 shadow-sm shadow-cyan-300/10' : 'border-cyan-100/15 bg-cyan-100/5 text-cyan-100/75 hover:border-cyan-100/35 hover:text-cyan-50'}`}
+          aria-current={isNowActive ? 'page' : undefined}
+        >
+          <Radio className={`h-3.5 w-3.5 ${isNowActive ? 'animate-pulse text-emerald-200' : 'text-cyan-200'}`} />
+          <span>NOW</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+        </button>
+        {categories.map(cat => {
+          const isActive = !isSpecialRoute && activeCategory === cat.id;
           const isGame = cat.id === 'GAME';
           const className = `flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-medium tracking-wider transition-all select-none ${
             isActive

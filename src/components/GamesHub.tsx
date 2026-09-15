@@ -329,7 +329,7 @@ export const GamesHub: React.FC<GamesHubProps> = ({ onInspectBuoy }) => {
       <div className="relative overflow-hidden rounded-3xl border border-cyan-100/15 bg-[linear-gradient(118deg,rgba(7,42,64,0.94),rgba(18,28,67,0.94))] p-7 shadow-[0_28px_80px_rgba(0,12,28,0.34)] sm:p-10">
         <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-300/15 blur-3xl" />
         <div className="relative max-w-2xl">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200/25 bg-cyan-100/10 px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-cyan-50 uppercase"><Gamepad2 className="h-3.5 w-3.5" /> VAWE arcade</span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200/25 bg-cyan-100/10 px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-cyan-50 uppercase"><Gamepad2 className="h-3.5 w-3.5" /> Signal Atlas arcade</span>
           <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl">Games made from real ocean signals.</h1>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-cyan-50/70 sm:text-base">Play three quick challenges using live NOAA buoy readings and verified station information. The result is a game; the source data stays visible.</p>
           <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-cyan-100/70">

@@ -10,11 +10,12 @@ from xml.sax.saxutils import escape
 from django.conf import settings
 from django.core.cache import cache
 from django.http import FileResponse, HttpRequest, HttpResponse, HttpResponseNotFound, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .models import DailyAttempt, DailyChallenge, LeaderboardEntry
+from .now_events import event_detail, filter_events, live_events_payload
 from .seo import breadcrumb_schema, page_meta, public_url
 from .services import (
     BUOY_STATIONS,
@@ -31,12 +32,13 @@ from .services import (
     station_by_slug,
     station_intelligence,
     stations_for_region,
+    wave_rankings_payload,
 )
 
 
 LEARN_PAGES = {
     "significant-wave-height": {
-        "title": "What Is Significant Wave Height? | Vawe",
+        "title": "What Is Significant Wave Height? | Signal Atlas",
         "heading": "What significant wave height means",
         "description": "Understand significant wave height in NOAA buoy observations and why it is useful for reading ocean conditions.",
         "intro": "Significant wave height is a statistical description of the sea state. It approximates the average height of the highest third of measured waves during an observation period.",
@@ -46,17 +48,17 @@ LEARN_PAGES = {
         ],
     },
     "how-ocean-buoys-measure-waves": {
-        "title": "How Ocean Buoys Measure Waves | Vawe",
+        "title": "How Ocean Buoys Measure Waves | Signal Atlas",
         "heading": "How ocean buoys measure waves",
-        "description": "A plain-language guide to the observations NOAA ocean buoys collect and how Vawe displays them.",
+        "description": "A plain-language guide to the observations NOAA ocean buoys collect and how Signal Atlas displays them.",
         "intro": "Ocean buoys use instruments that record motion and meteorological conditions. NOAA NDBC publishes those observations in station feeds.",
         "sections": [
-            ("Observed, not predicted", "Vawe displays available station observations. Forecasts and official marine warnings come from separate NOAA and NWS products."),
+            ("Observed, not predicted", "Signal Atlas displays available station observations. Forecasts and official marine warnings come from separate NOAA and NWS products."),
             ("The useful fields", "Wave height, dominant period, average period, wind speed and water temperature may be available, depending on the station feed."),
         ],
     },
     "wave-height-vs-swell-height": {
-        "title": "Wave Height vs Swell Height | Vawe",
+        "title": "Wave Height vs Swell Height | Signal Atlas",
         "heading": "Wave height versus swell height",
         "description": "Learn the difference between a buoy’s observed significant wave height and the idea of a swell.",
         "intro": "A buoy’s significant wave height summarizes the measured sea state at that location. Swell describes organized wave energy travelling away from its generating weather system.",
@@ -66,7 +68,7 @@ LEARN_PAGES = {
         ],
     },
     "wave-period-explained": {
-        "title": "Wave Period Explained | Vawe",
+        "title": "Wave Period Explained | Signal Atlas",
         "heading": "Wave period explained",
         "description": "Understand dominant and average wave period fields in NOAA buoy observations.",
         "intro": "Wave period is the elapsed time between wave crests. NOAA station feeds can report dominant period and average period in seconds.",
@@ -162,6 +164,14 @@ def buoy_observations(_: HttpRequest, station_id: str) -> JsonResponse:
 
 
 @require_GET
+def wave_rankings(request: HttpRequest) -> JsonResponse:
+    try:
+        return JsonResponse(wave_rankings_payload(request.GET.get("window", "24H")))
+    except ValueError as exc:
+        return _error(str(exc), 400)
+
+
+@require_GET
 def game_buoys(_: HttpRequest) -> JsonResponse:
     return JsonResponse(game_buoys_payload())
 
@@ -222,6 +232,41 @@ def earthquakes(_: HttpRequest) -> JsonResponse:
         return JsonResponse(earthquakes_payload())
     except ProviderError as exc:
         return _error("Failed to fetch the USGS earthquake feed", details=str(exc))
+
+
+@require_GET
+def events_live(request: HttpRequest) -> JsonResponse:
+    domain = request.GET.get("domain", "ALL").upper()
+    status = request.GET.get("status", "ALL").upper()
+    if domain not in {"ALL", "EARTH", "OCEAN", "WEATHER", "AIR", "SHIPS"}:
+        return _error("Use a supported NOW domain filter.", 400)
+    if status not in {"ALL", "LIVE", "RECENT"}:
+        return _error("Use ALL, LIVE, or RECENT for the NOW status filter.", 400)
+    multi = request.GET.get("multi", "false").lower() in {"1", "true", "yes"}
+    return JsonResponse(filter_events(live_events_payload(), domain=domain, status=status, multi=multi))
+
+
+@require_GET
+def events_recent(request: HttpRequest) -> JsonResponse:
+    domain = request.GET.get("domain", "ALL").upper()
+    if domain not in {"ALL", "EARTH", "OCEAN", "WEATHER", "AIR", "SHIPS"}:
+        return _error("Use a supported NOW domain filter.", 400)
+    multi = request.GET.get("multi", "false").lower() in {"1", "true", "yes"}
+    return JsonResponse(filter_events(live_events_payload(), domain=domain, status="RECENT", multi=multi))
+
+
+@require_GET
+def event_api(_: HttpRequest, event_id: str) -> JsonResponse:
+    detail = event_detail(event_id)
+    if not detail:
+        return _error("This live event has expired or is no longer available.", 404)
+    return JsonResponse(detail)
+
+
+@require_GET
+def events_activity(_: HttpRequest) -> JsonResponse:
+    payload = live_events_payload()
+    return JsonResponse({"updatedAt": payload["updatedAt"], "activity": payload["activity"], "providers": payload["providers"]})
 
 
 def _entry_json(entry: LeaderboardEntry) -> dict[str, Any]:
@@ -306,10 +351,10 @@ def home(request: HttpRequest) -> HttpResponse:
     except ProviderError as exc:
         overview = {"status": "unavailable", "message": str(exc), "stations": []}
     schemas = [
-        {"@context": "https://schema.org", "@type": "WebSite", "name": "Vawe — Live Ocean Events", "url": public_url(request, "/")},
-        {"@context": "https://schema.org", "@type": "WebApplication", "name": "Vawe — Live Ocean Events", "applicationCategory": "WeatherApplication", "operatingSystem": "Web", "url": public_url(request, "/")},
+        {"@context": "https://schema.org", "@type": "WebSite", "name": "Signal Atlas", "description": "Live ocean, weather, earthquake and space data with source context.", "url": public_url(request, "/")},
+        {"@context": "https://schema.org", "@type": "WebApplication", "name": "Signal Atlas Live Data Explorer", "description": "Explore live ocean waves, weather, earthquakes and space-weather conditions from public data sources.", "applicationCategory": "WeatherApplication", "operatingSystem": "Web", "isAccessibleForFree": True, "url": public_url(request, "/")},
     ]
-    return _page(request, path="/", title="Live Ocean Wave Events & NOAA Buoy Data | Vawe", description="See where ocean waves are rising, records are breaking and swells are arriving using observed NOAA buoy data.", schemas=schemas, context={"page_type": "home", "overview": overview})
+    return _page(request, path="/", title="Live Ocean Wave Data & NOAA Buoy Tracker | Signal Atlas", description="Explore live ocean waves, weather, earthquakes and space-weather conditions from transparent public data sources with Signal Atlas.", schemas=schemas, context={"page_type": "home", "overview": overview})
 
 
 @require_GET
@@ -318,8 +363,8 @@ def waves(request: HttpRequest) -> HttpResponse:
         overview = ocean_overview()
     except ProviderError as exc:
         overview = {"status": "unavailable", "message": str(exc), "stations": []}
-    schema = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Live NOAA Wave Observations", "url": public_url(request, "/waves")}
-    return _page(request, path="/waves", title="Live Wave Height Today — NOAA Buoy Data | Vawe", description="Explore observed wave height, changing conditions and recent threshold events from curated NOAA ocean buoys.", schemas=[schema, breadcrumb_schema(request, [("Home", "/"), ("Waves", "/waves")])], context={"page_type": "waves", "overview": overview, "breadcrumbs": [("Home", "/"), ("Waves", "/waves")]})
+    schema = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Live NOAA wave height observations", "description": "Live ocean wave height and NOAA buoy data from Signal Atlas's curated stations.", "url": public_url(request, "/waves"), "mainEntity": {"@type": "ItemList", "itemListElement": [{"@type": "ListItem", "position": index, "name": station["name"], "url": public_url(request, f"/buoys/{station['slug']}")} for index, station in enumerate(overview.get("stations", []), start=1)]}}
+    return _page(request, path="/waves", title="Live Wave Height Today — NOAA Buoy Data | Signal Atlas", description="Explore observed wave height, changing conditions and recent threshold events from curated NOAA ocean buoys.", schemas=[schema, breadcrumb_schema(request, [("Home", "/"), ("Waves", "/waves")])], context={"page_type": "waves", "overview": overview, "breadcrumbs": [("Home", "/"), ("Waves", "/waves")]})
 
 
 @require_GET
@@ -336,9 +381,9 @@ def region_page(request: HttpRequest, region: str) -> HttpResponse:
         except ProviderError:
             cards.append({"station": station, "latest": None, "isStale": True, "unavailable": True})
     title_region = details["name"]
-    schema = {"@context": "https://schema.org", "@type": "CollectionPage", "name": f"{title_region} wave observations", "url": public_url(request, f"/waves/{region}"), "mainEntity": {"@type": "ItemList", "itemListElement": [{"@type": "ListItem", "position": index, "url": public_url(request, f"/buoys/{station['slug']}")} for index, station in enumerate(stations, 1)]}}
+    schema = {"@context": "https://schema.org", "@type": "CollectionPage", "name": f"{title_region} wave observations", "description": f"Observed NOAA buoy wave-height data for {title_region}.", "url": public_url(request, f"/waves/{region}"), "mainEntity": {"@type": "ItemList", "itemListElement": [{"@type": "ListItem", "position": index, "name": station["name"], "url": public_url(request, f"/buoys/{station['slug']}")} for index, station in enumerate(stations, 1)]}}
     breadcrumbs = [("Home", "/"), ("Waves", "/waves"), (title_region, f"/waves/{region}")]
-    return _page(request, path=f"/waves/{region}", title=f"{title_region} Wave Height Today — NOAA Buoys | Vawe", description=f"Observed NOAA buoy wave heights and event context for {title_region}.", schemas=[schema, breadcrumb_schema(request, breadcrumbs)], context={"page_type": "region", "region": {"id": region, **details}, "cards": cards, "breadcrumbs": breadcrumbs})
+    return _page(request, path=f"/waves/{region}", title=f"{title_region} Wave Height Today — NOAA Buoys | Signal Atlas", description=f"Observed NOAA buoy wave heights and event context for {title_region}.", schemas=[schema, breadcrumb_schema(request, breadcrumbs)], context={"page_type": "region", "region": {"id": region, **details}, "cards": cards, "breadcrumbs": breadcrumbs})
 
 
 @require_GET
@@ -357,15 +402,24 @@ def buoy_page(request: HttpRequest, station_slug: str) -> HttpResponse:
         {"@context": "https://schema.org", "@type": "WebPage", "name": f"{station['name']} wave height today", "url": public_url(request, f"/buoys/{station['slug']}")}, _dataset_schema(request, station, intelligence), breadcrumb_schema(request, breadcrumbs),
         {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is significant wave height?", "acceptedAnswer": {"@type": "Answer", "text": "It is a statistical measure that approximates the average height of the highest third of measured waves during an observation period."}}]},
     ]
-    title = f"{station['name'].replace(' Buoy', '')} Wave Height Today — NOAA Buoy {station['id']} | Vawe"
+    title = f"{station['name'].replace(' Buoy', '')} Wave Height Today — NOAA Buoy {station['id']} | Signal Atlas"
     return _page(request, path=f"/buoys/{station['slug']}", title=title, description=f"Live observed significant wave height, wave period and event context for NOAA buoy {station['id']} near {station['location']}.", schemas=schemas, context={"page_type": "station", "station": station, "intelligence": intelligence, "error": error, "nearby": nearby, "chart_points": _chart_points(intelligence["measurements24h"]) if intelligence else [], "breadcrumbs": breadcrumbs, "high_threshold": HIGH_WAVE_THRESHOLD_METERS})
+
+
+@require_GET
+def legacy_ocean_buoy(request: HttpRequest, station_id: str) -> HttpResponse:
+    """Consolidate the former client-side buoy URL into its indexable page."""
+    station = next((item for item in BUOY_STATIONS if item["id"] == station_id.upper()), None)
+    if not station:
+        return HttpResponseNotFound("This curated NOAA buoy page does not exist.")
+    return redirect(f"/buoys/{station['slug']}", permanent=True)
 
 
 @require_GET
 def game_page(request: HttpRequest) -> HttpResponse:
     today = datetime.now(timezone.utc).date().isoformat()
     schema = {"@context": "https://schema.org", "@type": "Game", "name": "Swell Duel", "description": "A five-round higher-or-lower game based on a recorded NOAA buoy observation snapshot.", "url": public_url(request, "/game")}
-    return _page(request, path="/game", title="Swell Duel — Daily NOAA Buoy Game | Vawe", description="Play a daily higher-or-lower wave challenge using observed NOAA buoy data.", schemas=[schema], context={"page_type": "game", "daily_path": f"/game/daily/{today}"}, interactive=True)
+    return _page(request, path="/game", title="Swell Duel — Daily NOAA Buoy Game | Signal Atlas", description="Play a daily higher-or-lower wave challenge using observed NOAA buoy data.", schemas=[schema], context={"page_type": "game", "daily_path": f"/game/daily/{today}"}, interactive=True)
 
 
 @require_GET
@@ -378,7 +432,7 @@ def daily_game_page(request: HttpRequest, day: str) -> HttpResponse:
     except (ValueError, ProviderError):
         return HttpResponseNotFound("This daily challenge is not available.")
     schema = {"@context": "https://schema.org", "@type": "Game", "name": f"Swell Duel daily challenge {day}", "url": public_url(request, f"/game/daily/{day}")}
-    return _page(request, path=f"/game/daily/{day}", title=f"Swell Duel Daily Challenge — {day} | Vawe", description="Five NOAA-observed higher-or-lower buoy rounds recorded for this day.", schemas=[schema], context={"page_type": "daily_game", "challenge": challenge, "daily_path": f"/game/daily/{day}"}, interactive=True)
+    return _page(request, path=f"/game/daily/{day}", title=f"Swell Duel Daily Challenge — {day} | Signal Atlas", description="Five NOAA-observed higher-or-lower buoy rounds recorded for this day.", schemas=[schema], context={"page_type": "daily_game", "challenge": challenge, "daily_path": f"/game/daily/{day}"}, interactive=True)
 
 
 @require_GET
@@ -389,7 +443,30 @@ def earthquake_page(request: HttpRequest) -> HttpResponse:
     except ProviderError as exc:
         latest, error = None, str(exc)
     schema = {"@context": "https://schema.org", "@type": "WebPage", "name": "Live earthquakes from USGS", "url": public_url(request, "/earthquakes")}
-    return _page(request, path="/earthquakes", title="Live Earthquake Events Today — USGS Data | Vawe", description="Observed earthquake events from the USGS Earthquake Hazards Program.", schemas=[schema], context={"page_type": "earthquakes", "latest_earthquake": latest, "error": error}, interactive=True)
+    return _page(request, path="/earthquakes", title="Live Earthquake Events Today — USGS Data | Signal Atlas", description="Observed earthquake events from the USGS Earthquake Hazards Program.", schemas=[schema], context={"page_type": "earthquakes", "latest_earthquake": latest, "error": error}, interactive=True)
+
+
+@require_GET
+def now_page(request: HttpRequest) -> HttpResponse:
+    schemas = [{"@context": "https://schema.org", "@type": "WebPage", "name": "What's Happening Right Now? Live World Events", "description": "Explore live events happening around the world, connecting observed ocean and earthquake signals with available public data sources.", "url": public_url(request, "/now") }]
+    return _page(request, path="/now", title="What's Happening Right Now? Live World Events | Signal Atlas", description="Explore live events happening around the world right now, connecting signals from oceans, earthquakes, weather, aircraft and ships.", schemas=schemas, context={"page_type": "now"}, interactive=True)
+
+
+@require_GET
+def event_page(request: HttpRequest, event_id: str) -> HttpResponse:
+    detail = event_detail(event_id)
+    if not detail:
+        return HttpResponseNotFound("This live event has expired or is no longer available.")
+    event = detail["event"]
+    schemas = [{"@context": "https://schema.org", "@type": "Event", "name": event["title"], "startDate": event["timestamp"], "location": {"@type": "Place", "name": event["location"], "geo": {"@type": "GeoCoordinates", "latitude": event["latitude"], "longitude": event["longitude"]}}, "url": public_url(request, f"/events/{event_id}") }]
+    return _page(request, path=f"/events/{event_id}", title=f"{event['title']} — Live Event | Signal Atlas", description=event["summary"], schemas=schemas, context={"page_type": "event_detail", "event": event}, interactive=True)
+
+
+@require_GET
+def learn_index(request: HttpRequest) -> HttpResponse:
+    articles = [{"slug": slug, **article} for slug, article in LEARN_PAGES.items()]
+    schema = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Ocean wave data guides", "description": "Plain-language guides to significant wave height, wave periods, swells, and NOAA buoy observations.", "url": public_url(request, "/learn"), "mainEntity": {"@type": "ItemList", "itemListElement": [{"@type": "ListItem", "position": index, "name": article["heading"], "url": public_url(request, f"/learn/{article['slug']}")} for index, article in enumerate(articles, start=1)]}}
+    return _page(request, path="/learn", title="Ocean Wave Data Explained — NOAA Buoy Guides | Signal Atlas", description="Learn how to read live wave height, NOAA buoy observations, swell, and wave period data in plain language.", schemas=[schema, breadcrumb_schema(request, [("Home", "/"), ("Learn", "/learn")])], context={"page_type": "learn_index", "articles": articles, "breadcrumbs": [("Home", "/"), ("Learn", "/learn")]})
 
 
 @require_GET
@@ -398,8 +475,8 @@ def learn_page(request: HttpRequest, article: str) -> HttpResponse:
     if not page:
         return HttpResponseNotFound("This learning page does not exist.")
     path = f"/learn/{article}"
-    breadcrumbs = [("Home", "/"), ("Learn", "/waves"), (page["heading"], path)]
-    schema = {"@context": "https://schema.org", "@type": "Article", "headline": page["heading"], "description": page["description"], "mainEntityOfPage": public_url(request, path), "publisher": {"@type": "Organization", "name": "Vawe"}}
+    breadcrumbs = [("Home", "/"), ("Learn", "/learn"), (page["heading"], path)]
+    schema = {"@context": "https://schema.org", "@type": "Article", "headline": page["heading"], "description": page["description"], "mainEntityOfPage": public_url(request, path), "publisher": {"@type": "Organization", "name": "Signal Atlas"}}
     return _page(request, path=path, title=page["title"], description=page["description"], schemas=[schema, breadcrumb_schema(request, breadcrumbs)], context={"page_type": "learn", "article": page, "breadcrumbs": breadcrumbs})
 
 
@@ -410,7 +487,7 @@ def robots(request: HttpRequest) -> HttpResponse:
 
 @require_GET
 def sitemap(request: HttpRequest) -> HttpResponse:
-    paths = ["/", "/waves", "/game", f"/game/daily/{datetime.now(timezone.utc).date().isoformat()}", "/earthquakes"]
+    paths = ["/", "/now", "/waves", "/learn", "/game", f"/game/daily/{datetime.now(timezone.utc).date().isoformat()}", "/earthquakes"]
     paths.extend(f"/waves/{region}" for region in REGIONS)
     paths.extend(f"/buoys/{station['slug']}" for station in BUOY_STATIONS)
     paths.extend(f"/learn/{article}" for article in LEARN_PAGES)

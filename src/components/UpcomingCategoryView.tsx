@@ -85,9 +85,9 @@ export const UpcomingCategoryView: React.FC<UpcomingCategoryViewProps> = ({
     WEATHER: {
       pipeline: 'Forecast details',
       source: 'U.S. National Weather Service',
-      description: 'See the latest available U.S. National Weather Service hourly forecast for the configured location, including temperature, condition and wind details. Vawe does not present this forecast as a weather-event count.',
+      description: 'See the latest available U.S. National Weather Service hourly forecast for the configured location, including temperature, condition and wind details. Signal Atlas does not present this forecast as a weather-event count.',
       metrics: ['Forecast temperature', 'Short forecast', 'Reported wind field'],
-      sampleStory: 'Vawe is showing the latest normalized NWS signal. A weather-event summary appears only after an observed-event detector is configured.'
+      sampleStory: 'Signal Atlas is showing the latest normalized NWS signal. A weather-event summary appears only after an observed-event detector is configured.'
     },
     TRAFFIC: {
       pipeline: 'Inductive Loop & Microwave Sensor Stream',
@@ -101,7 +101,7 @@ export const UpcomingCategoryView: React.FC<UpcomingCategoryViewProps> = ({
       source: 'NOAA Space Weather Prediction Center (SWPC)',
       description: 'Continuous monitoring of 0.1-0.8 nm solar X-ray irradiance. Detects C, M, and X-class solar flare eruption events affecting high-frequency radio propagation.',
       metrics: ['X-ray irradiance flux', 'Proton flux density', 'Geomagnetic Kp index'],
-      sampleStory: 'Vawe displays the current normalized GOES X-ray signal; it does not claim a flare-event count without an explicit detector.'
+      sampleStory: 'Signal Atlas displays the current normalized GOES X-ray signal; it does not claim a flare-event count without an explicit detector.'
     }
   };
 
@@ -113,23 +113,38 @@ export const UpcomingCategoryView: React.FC<UpcomingCategoryViewProps> = ({
     sampleStory: 'This source is not yet configured for a public event summary.'
   };
   const isWeather = category === 'WEATHER';
+  const isSpace = category === 'SPACE';
+  const hasCinematicHero = isWeather || isSpace;
+  const isLiveDataCategory = isWeather || isSpace;
   const sourceMessage = isWeather
     ? `Latest available forecast for ${backendStatus?.location || 'the configured location'}.`
     : backendStatus?.message;
 
   return (
     <div className={`telemetry-extension telemetry-extension--${category.toLowerCase()} py-12 max-w-3xl mx-auto font-mono text-left`}>
-      <div className="telemetry-extension-shell p-8 rounded-2xl bg-zinc-950/80 border border-zinc-800 shadow-2xl backdrop-blur-xl">
+      <div className={`telemetry-extension-shell relative overflow-hidden p-8 rounded-2xl bg-zinc-950/80 border border-zinc-800 shadow-2xl backdrop-blur-xl ${isWeather ? 'weather-telemetry-hero' : ''} ${isSpace ? 'space-telemetry-hero' : ''}`}>
+        {hasCinematicHero && (
+          <>
+            <img
+              src={isWeather ? '/images/weather-cinematic-hero.jpg' : '/images/space-cinematic-hero.jpg'}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-60"
+            />
+            <div className={`pointer-events-none absolute inset-0 ${isWeather ? 'bg-[linear-gradient(115deg,rgba(12,31,48,0.96)_0%,rgba(22,45,62,0.84)_48%,rgba(55,83,95,0.5)_100%)]' : 'bg-[linear-gradient(115deg,rgba(3,10,27,0.97)_0%,rgba(8,24,51,0.88)_50%,rgba(18,70,91,0.52)_100%)]'}`} />
+          </>
+        )}
+        <div className="relative z-10">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 rounded-xl bg-cyan-950/50 border border-cyan-500/30 text-cyan-400">
             <Radio className="h-5 w-5 animate-pulse" />
           </div>
           <div>
             <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
-              {isWeather ? 'Live weather data' : 'Architectural Pipeline Extension'}
+              {isWeather ? 'Live weather data' : isSpace ? 'Live space-weather data' : 'Architectural Pipeline Extension'}
             </span>
             <h2 className="text-xl font-bold text-white uppercase tracking-tight">
-              {isWeather ? 'Weather forecast snapshot' : `${catInfo.label} — Telemetry Stream`}
+              {isWeather ? 'Weather forecast snapshot' : isSpace ? 'Space-weather snapshot' : `${catInfo.label} — Telemetry Stream`}
             </h2>
           </div>
         </div>
@@ -143,7 +158,7 @@ export const UpcomingCategoryView: React.FC<UpcomingCategoryViewProps> = ({
             <div>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
                 <span className={`h-2 w-2 rounded-full ${backendStatus?.status === 'live' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                <span className={backendStatus?.status === 'live' ? 'text-emerald-300' : 'text-amber-300'}>{isWeather ? 'Data source' : 'Django source gateway'}</span>
+                <span className={backendStatus?.status === 'live' ? 'text-emerald-300' : 'text-amber-300'}>{isLiveDataCategory ? 'Data source' : 'Django source gateway'}</span>
               </div>
               <div className="mt-1 text-sm font-bold text-white">
                 {backendLoading ? 'Checking data source…' : backendStatus?.source || 'Source status unavailable'}
@@ -154,7 +169,7 @@ export const UpcomingCategoryView: React.FC<UpcomingCategoryViewProps> = ({
             </div>
             {backendStatus && (
               <span className={`self-start rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${backendStatus.status === 'live' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/30 bg-amber-400/10 text-amber-300'}`}>
-                {backendStatus.status === 'live' ? (isWeather ? 'Current forecast' : 'Live via Django') : 'Provider setup'}
+                {backendStatus.status === 'live' ? (isWeather ? 'Current forecast' : isSpace ? 'Current signal' : 'Live via Django') : 'Provider setup'}
               </span>
             )}
           </div>
@@ -220,16 +235,17 @@ export const UpcomingCategoryView: React.FC<UpcomingCategoryViewProps> = ({
         <div className="flex items-center justify-between pt-4 border-t border-zinc-900">
           <div className="flex items-center gap-2 text-zinc-500 text-xs">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
-            <span>{isWeather ? 'Source values and time shown as reported' : 'Normalized to standard DataSource schema'}</span>
+            <span>{isLiveDataCategory ? 'Source values and time shown as reported' : 'Normalized to standard DataSource schema'}</span>
           </div>
 
           <button
             onClick={() => onSelectCategory('OCEAN')}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs transition-colors cursor-pointer"
           >
-            <span>{isWeather ? 'Back to live ocean waves' : 'Return to Live Ocean Wave MVP'}</span>
+            <span>{isLiveDataCategory ? 'Back to live ocean waves' : 'Return to Live Ocean Wave MVP'}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
+        </div>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { EventDetector } from './engine/EventDetector';
 import { MainStatistic } from './components/MainStatistic';
 import { WaveChart } from './components/WaveChart';
 import { EventTimeline } from './components/EventTimeline';
+import { WaveAreaRankings } from './components/WaveAreaRankings';
 import { StationSelector } from './components/StationSelector';
 import { CategoryNav } from './components/CategoryNav';
 import { ThresholdControl } from './components/ThresholdControl';
@@ -12,6 +13,8 @@ import { SourceTransparency } from './components/SourceTransparency';
 import { LiveIndicator } from './components/LiveIndicator';
 import { UpcomingCategoryView } from './components/UpcomingCategoryView';
 import { GameTeaserBanner } from './components/GameTeaserBanner';
+import { NowView } from './components/NowView';
+import { EventDetailView } from './components/EventDetailView';
 import { AlertTriangle, Layers, Waves } from 'lucide-react';
 
 const GamesHub = lazy(() => import('./components/GamesHub').then(module => ({ default: module.GamesHub })));
@@ -34,12 +37,19 @@ const STORAGE_KEYS = {
 
 export default function App() {
   const isDailyGameRoute = /^\/game\/daily\/\d{4}-\d{2}-\d{2}$/.test(window.location.pathname);
+  const initialEventId = window.location.pathname.match(/^\/events\/([^/]+)$/)?.[1] || null;
+  const [routeMode, setRouteMode] = useState<'NOW' | 'EVENT' | null>(() => window.location.pathname === '/now' ? 'NOW' : initialEventId ? 'EVENT' : null);
+  const [currentEventId, setCurrentEventId] = useState<string | null>(initialEventId);
   useEffect(() => {
     if (isDailyGameRoute) {
       const date = window.location.pathname.split('/').pop();
-      document.title = `Swell Duel Daily Challenge — ${date} | Vawe`;
+      document.title = `Swell Duel Daily Challenge — ${date} | Signal Atlas`;
     }
   }, [isDailyGameRoute]);
+  useEffect(() => {
+    if (routeMode === 'NOW') document.title = "What's Happening Right Now? Live World Events | Signal Atlas";
+    if (routeMode === 'EVENT') document.title = 'Live Event Detail | Signal Atlas';
+  }, [routeMode]);
   // Navigation & Category state
   const [category, setCategory] = useState<CategoryId>(() => {
     const path = window.location.pathname;
@@ -49,7 +59,7 @@ export default function App() {
     if (path.includes('/aircraft')) return 'AIR';
     if (path.includes('/ships')) return 'SHIPS';
     if (path.includes('/weather')) return 'WEATHER';
-    if (path === '/waves' || path.startsWith('/waves/') || path.startsWith('/buoys/')) return 'OCEAN';
+    if (path === '/waves' || path.startsWith('/waves/') || path.startsWith('/ocean/waves/') || path.startsWith('/buoys/')) return 'OCEAN';
     const saved = localStorage.getItem(STORAGE_KEYS.CATEGORY);
     return (saved as CategoryId) || 'OCEAN';
   });
@@ -57,8 +67,8 @@ export default function App() {
   // Station state
   const [stations, setStations] = useState<StationInfo[]>([]);
   const [currentStationId, setCurrentStationId] = useState<string>(() => {
-    // Check URL path for station id e.g. /ocean/waves/46059
-    const match = window.location.pathname.match(/\/ocean\/waves\/([A-Za-z0-9]+)/);
+    // Accept the legacy dashboard path and canonical buoy slugs.
+    const match = window.location.pathname.match(/\/(?:ocean\/waves|buoys)\/([A-Za-z0-9]+)/);
     if (match && match[1]) return match[1].toUpperCase();
     return localStorage.getItem(STORAGE_KEYS.STATION) || '46026';
   });
@@ -83,6 +93,11 @@ export default function App() {
   const [isDelayed, setIsDelayed] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const canonicalStationPath = useMemo(() => {
+    const station = stations.find(item => item.id === currentStationId);
+    return station?.slug ? `/buoys/${station.slug}` : '/waves';
+  }, [stations, currentStationId]);
 
   // Data source instance
   const oceanSource = useMemo(() => new OceanBuoySource(), []);
@@ -149,28 +164,31 @@ export default function App() {
 
   // Trigger fetch when station changes
   useEffect(() => {
+    if (routeMode) return;
     fetchBuoyData(currentStationId, true);
     localStorage.setItem(STORAGE_KEYS.STATION, currentStationId);
 
-    // Update URL path and title for SEO
+    // Keep client navigation on the same public URL that Django renders and canonicalizes.
     if (category === 'OCEAN') {
-      window.history.replaceState(null, '', `/ocean/waves/${currentStationId.toLowerCase()}`);
-      document.title = `High Wave Events Today — Live Ocean Data (Station ${currentStationId})`;
+      window.history.replaceState(null, '', canonicalStationPath);
+      document.title = `Live Wave Height Today — NOAA Buoy ${currentStationId} | Signal Atlas`;
     }
-  }, [currentStationId, category, fetchBuoyData]);
+  }, [currentStationId, category, canonicalStationPath, fetchBuoyData, routeMode]);
 
   // Category changes & URL updates
   const handleSelectCategory = (newCat: CategoryId) => {
+    setRouteMode(null);
+    setCurrentEventId(null);
     setCategory(newCat);
     localStorage.setItem(STORAGE_KEYS.CATEGORY, newCat);
     switch (newCat) {
       case 'OCEAN':
-        window.history.pushState(null, '', `/ocean/waves/${currentStationId.toLowerCase()}`);
-        document.title = `High Wave Events Today — Live Ocean Data (Station ${currentStationId})`;
+        window.history.pushState(null, '', canonicalStationPath);
+        document.title = `Live Wave Height Today — NOAA Buoy ${currentStationId} | Signal Atlas`;
         break;
       case 'GAME':
         window.history.pushState(null, '', '/game');
-        document.title = 'VAWE Ocean Games — Live NOAA Buoy Challenges';
+        document.title = 'Signal Atlas Ocean Games — Live NOAA Buoy Challenges';
         break;
       case 'EARTH':
         window.history.pushState(null, '', '/earthquakes');
@@ -189,6 +207,20 @@ export default function App() {
         document.title = `${newCat} Events Today — LIVE EVENTS`;
         break;
     }
+  };
+
+  const handleSelectNow = () => {
+    setRouteMode('NOW');
+    setCurrentEventId(null);
+    window.history.pushState(null, '', '/now');
+    document.title = "What's Happening Right Now? Live World Events | Signal Atlas";
+  };
+
+  const handleOpenEvent = (eventId: string) => {
+    setRouteMode('EVENT');
+    setCurrentEventId(eventId);
+    window.history.pushState(null, '', `/events/${eventId}`);
+    document.title = 'Live Event Detail | Signal Atlas';
   };
 
   // Continuous background polling (every 45s)
@@ -245,7 +277,7 @@ export default function App() {
   }, [observations, detector]);
 
   return (
-    <div className={`cinematic-app min-h-screen overflow-hidden bg-[#061827] text-slate-100 selection:bg-cyan-300/30 selection:text-white ${category === 'OCEAN' ? 'ocean-page' : ''} ${category === 'WEATHER' ? 'weather-page' : ''}`}>
+    <div className={`cinematic-app min-h-screen overflow-hidden bg-[#061827] text-slate-100 selection:bg-cyan-300/30 selection:text-white ${category === 'OCEAN' ? 'ocean-page' : ''} ${category === 'WEATHER' ? 'weather-page' : ''} ${category === 'SPACE' ? 'space-page' : ''}`}>
       <div className="cinematic-page-glow pointer-events-none fixed inset-x-0 top-0 -z-0 h-[48rem] opacity-80" />
       {/* Top Ambient Navigation Bar */}
       <header className="sticky top-0 z-50 border-b border-cyan-100/10 bg-[#061827]/80 backdrop-blur-2xl">
@@ -258,10 +290,10 @@ export default function App() {
               </div>
               <div className="flex flex-col">
                 <span className="font-mono text-base font-black tracking-[0.16em] text-white">
-                  VAWE
+                  SIGNAL ATLAS
                 </span>
                 <span className="-mt-0.5 text-[10px] font-mono text-cyan-100/55">
-                  Ocean signal observatory
+                  Live data observatory
                 </span>
               </div>
             </div>
@@ -277,13 +309,13 @@ export default function App() {
                 />
               )}
 
-              <LiveIndicator
+              {!routeMode && <LiveIndicator
                 isLive={!isDelayed && !error && observations.length > 0}
                 isDelayed={isDelayed}
                 lastUpdated={lastObservationTime}
                 onRefresh={() => fetchBuoyData(currentStationId, true)}
                 isLoading={isLoading}
-              />
+              />}
             </div>
           </div>
 
@@ -291,14 +323,21 @@ export default function App() {
           <CategoryNav
             activeCategory={category}
             onSelectCategory={handleSelectCategory}
+            isNowActive={routeMode === 'NOW'}
+            isSpecialRoute={Boolean(routeMode)}
+            onSelectNow={handleSelectNow}
           />
         </div>
       </header>
 
       {/* Main Experience Container */}
       <main className="relative z-10 mx-auto max-w-7xl space-y-8 px-4 py-6 sm:space-y-10 sm:px-6 sm:py-8 lg:px-8">
+        {routeMode === 'NOW' && <NowView onOpenEvent={handleOpenEvent} />}
+
+        {routeMode === 'EVENT' && currentEventId && <EventDetailView eventId={currentEventId} onBackToNow={handleSelectNow} />}
+
         {/* VIEW 1: OCEAN WAVES (MVP) */}
-        {category === 'OCEAN' && (
+        {!routeMode && category === 'OCEAN' && (
           <>
             {/* Error banner if API fails */}
             {error && (
@@ -336,6 +375,12 @@ export default function App() {
               isLoading={isLoading}
               stationName={stationMeta?.name}
               stationId={stationMeta?.id || currentStationId}
+            />
+
+            <WaveAreaRankings
+              timeRange={timeRange}
+              refreshKey={lastObservationTime}
+              onSelectStation={setCurrentStationId}
             />
 
             {/* GAME TEASER BANNER (Drives viral views & gameplay) */}
@@ -402,7 +447,7 @@ export default function App() {
         )}
 
         {/* VIEW: SWELL DUEL GAME */}
-        {category === 'GAME' && (
+        {!routeMode && category === 'GAME' && (
           <Suspense fallback={<RouteLoading />}>
             {isDailyGameRoute ? <DailySwellDuel /> : <GamesHub
               onInspectBuoy={(stationId) => {
@@ -414,12 +459,12 @@ export default function App() {
         )}
 
         {/* VIEW 2: EARTHQUAKES */}
-        {category === 'EARTH' && (
+        {!routeMode && category === 'EARTH' && (
           <Suspense fallback={<RouteLoading />}><EarthquakeView /></Suspense>
         )}
 
         {/* VIEW 3+: UPCOMING CATEGORIES */}
-        {category !== 'OCEAN' && category !== 'EARTH' && category !== 'GAME' && (
+        {!routeMode && category !== 'OCEAN' && category !== 'EARTH' && category !== 'GAME' && (
           <UpcomingCategoryView
             category={category}
             onSelectCategory={handleSelectCategory}
@@ -431,9 +476,9 @@ export default function App() {
       <footer className="relative z-10 mt-16 border-t border-cyan-100/10 py-8 text-center font-mono text-xs text-cyan-50/45">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-cyan-50/55">
-            <span className="font-bold text-cyan-50">VAWE</span>
+            <span className="font-bold text-cyan-50">Signal Atlas</span>
             <span>—</span>
-            <span>Live data stream event detection & real-time statistics</span>
+            <span>Public signals, clear context & real-time statistics</span>
           </div>
           <div className="flex items-center gap-4">
             <a

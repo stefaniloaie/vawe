@@ -1,4 +1,4 @@
-"""Django settings for the VAWE live-data API."""
+"""Django settings for the Signal Atlas live-data API."""
 from __future__ import annotations
 
 import os

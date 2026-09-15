@@ -95,7 +95,14 @@ export const EarthquakeView: React.FC = () => {
       </div>
 
       {/* Main Headline Counter */}
-      <div className="py-6 text-left">
+      <section className="earth-cinematic-hero relative isolate overflow-hidden rounded-2xl border border-slate-100/15 px-5 py-7 text-left shadow-[0_24px_70px_rgba(4,15,28,0.28)] sm:px-7">
+        <img
+          src="/images/earth-cinematic-hero.jpg"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover"
+        />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(105deg,rgba(5,19,31,0.93)_0%,rgba(10,27,40,0.8)_50%,rgba(18,38,49,0.44)_100%)]" />
         <div className="flex items-baseline gap-6">
           <AnimatePresence mode="popLayout">
             <motion.div
@@ -117,7 +124,7 @@ export const EarthquakeView: React.FC = () => {
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Stats Band */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-zinc-950 border border-zinc-800 font-mono text-xs">

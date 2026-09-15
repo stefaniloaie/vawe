@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Django command-line utility for the VAWE data API."""
+"""Django command-line utility for the Signal Atlas data API."""
 import os
 import sys
 
