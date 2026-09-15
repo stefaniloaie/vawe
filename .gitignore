@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+.venv/
+__pycache__/
+*.py[cod]
+backend/db.sqlite3
+backend/staticfiles/

@@ -243,15 +243,15 @@ export const WaveChart: React.FC<WaveChartProps> = ({
           <defs>
             {/* Ambient area gradient below normal curve */}
             <linearGradient id="waveAreaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.25" />
-              <stop offset="70%" stopColor="#06b6d4" stopOpacity="0.05" />
-              <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.3" />
+              <stop offset="70%" stopColor="#a78bfa" stopOpacity="0.06" />
+              <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.0" />
             </linearGradient>
 
             {/* High-wave alert gradient for areas above threshold */}
             <linearGradient id="alertAreaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#f4b860" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#f4b860" stopOpacity="0.0" />
             </linearGradient>
 
             <pattern id="gridLines" width="100" height="40" patternUnits="userSpaceOnUse">
@@ -322,7 +322,7 @@ export const WaveChart: React.FC<WaveChartProps> = ({
             <path
               d={linePath}
               fill="none"
-              stroke="#22d3ee"
+              stroke="#99f6e4"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"

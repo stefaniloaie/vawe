@@ -9,7 +9,7 @@ export const CATEGORY_DEFINITIONS: Array<{
   question: string;
   metric: string;
   isAvailable: boolean;
-  statusBadge: 'LIVE' | 'SOON';
+  statusBadge: 'LIVE' | 'SOON' | 'SETUP';
 }> = [
   {
     id: 'OCEAN',
@@ -21,9 +21,9 @@ export const CATEGORY_DEFINITIONS: Array<{
   },
   {
     id: 'GAME',
-    label: 'SWELL DUEL',
-    question: 'Which ocean buoy has bigger waves right now?',
-    metric: 'Real-time live ocean duel & guessing game',
+    label: 'GAMES',
+    question: 'Which live ocean challenge would you like to play?',
+    metric: 'Live ocean data games and station challenges',
     isAvailable: true,
     statusBadge: 'LIVE'
   },
@@ -41,7 +41,7 @@ export const CATEGORY_DEFINITIONS: Array<{
     question: 'How many planes crossed this area today?',
     metric: 'Flight corridor density',
     isAvailable: false,
-    statusBadge: 'SOON'
+    statusBadge: 'SETUP'
   },
   {
     id: 'SHIPS',
@@ -49,15 +49,15 @@ export const CATEGORY_DEFINITIONS: Array<{
     question: 'How many ships entered this area today?',
     metric: 'AIS vessel transits',
     isAvailable: false,
-    statusBadge: 'SOON'
+    statusBadge: 'SETUP'
   },
   {
     id: 'WEATHER',
     label: 'WEATHER',
     question: 'How many severe wind gusts happened today?',
     metric: 'Peak wind gusts',
-    isAvailable: false,
-    statusBadge: 'SOON'
+    isAvailable: true,
+    statusBadge: 'LIVE'
   },
   {
     id: 'TRAFFIC',
@@ -65,15 +65,15 @@ export const CATEGORY_DEFINITIONS: Array<{
     question: 'How many traffic surge events happened today?',
     metric: 'Corridor vehicle volume',
     isAvailable: false,
-    statusBadge: 'SOON'
+    statusBadge: 'SETUP'
   },
   {
     id: 'SPACE',
     label: 'SPACE',
     question: 'How many solar flare events happened today?',
     metric: 'X-ray solar flux',
-    isAvailable: false,
-    statusBadge: 'SOON'
+    isAvailable: true,
+    statusBadge: 'LIVE'
   }
 ];
 

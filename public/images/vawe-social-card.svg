@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Vawe — Live Ocean Events</title>
+  <desc id="desc">Cinematic ocean signal graphic for Vawe live NOAA buoy observations.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0d4662"/><stop offset=".48" stop-color="#06273a"/><stop offset="1" stop-color="#020b14"/></linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#71e6f8" stop-opacity=".16"/><stop offset=".5" stop-color="#ccfbff" stop-opacity=".94"/><stop offset="1" stop-color="#71e6f8" stop-opacity=".12"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g fill="none" stroke="url(#wave)" stroke-width="3" filter="url(#glow)"><path d="M-30 410 C130 300 220 510 395 402 S650 290 820 397 S1040 492 1230 370"/><path d="M-25 485 C130 375 260 566 430 460 S690 350 870 452 S1070 558 1230 430" opacity=".7"/><path d="M-20 325 C150 220 260 415 445 318 S705 198 875 302 S1080 408 1220 294" opacity=".42"/></g>
+  <circle cx="937" cy="160" r="146" fill="#6ee7f9" opacity=".06"/><circle cx="937" cy="160" r="88" fill="#d8fdff" opacity=".07"/>
+  <text x="90" y="145" fill="#b6f6ff" font-family="Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="8">VAWE</text>
+  <text x="90" y="245" fill="white" font-family="Arial, sans-serif" font-size="70" font-weight="800">LIVE OCEAN EVENTS</text>
+  <text x="92" y="305" fill="#bee7ee" font-family="Arial, sans-serif" font-size="31">See where waves are rising, records are breaking</text>
+  <text x="92" y="348" fill="#bee7ee" font-family="Arial, sans-serif" font-size="31">and swells are arriving.</text>
+  <g transform="translate(92 498)"><rect width="316" height="56" rx="28" fill="#83eaf8"/><text x="30" y="36" fill="#052033" font-family="Arial, sans-serif" font-size="21" font-weight="800">NOAA BUOY OBSERVATIONS</text></g>
+</svg>

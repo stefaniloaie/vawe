@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { CategoryId, TimeRange, StationInfo, NormalizedObservation } from './types';
 import { OceanBuoySource } from './sources/OceanBuoySource';
 import { EventDetector } from './engine/EventDetector';
@@ -10,11 +10,19 @@ import { CategoryNav } from './components/CategoryNav';
 import { ThresholdControl } from './components/ThresholdControl';
 import { SourceTransparency } from './components/SourceTransparency';
 import { LiveIndicator } from './components/LiveIndicator';
-import { EarthquakeView } from './components/EarthquakeView';
 import { UpcomingCategoryView } from './components/UpcomingCategoryView';
-import { BuoyDuelGame } from './components/BuoyDuelGame';
 import { GameTeaserBanner } from './components/GameTeaserBanner';
-import { AlertTriangle, RefreshCw, Layers } from 'lucide-react';
+import { AlertTriangle, Layers, Waves } from 'lucide-react';
+
+const GamesHub = lazy(() => import('./components/GamesHub').then(module => ({ default: module.GamesHub })));
+const EarthquakeView = lazy(() => import('./components/EarthquakeView').then(module => ({ default: module.EarthquakeView })));
+const DailySwellDuel = lazy(() => import('./components/DailySwellDuel').then(module => ({ default: module.DailySwellDuel })));
+
+const RouteLoading = () => (
+  <div className="flex min-h-64 items-center justify-center font-mono text-sm text-cyan-100/70">
+    Loading this live-data view…
+  </div>
+);
 
 const STORAGE_KEYS = {
   STATION: 'live_events_station_id',
@@ -25,6 +33,13 @@ const STORAGE_KEYS = {
 };
 
 export default function App() {
+  const isDailyGameRoute = /^\/game\/daily\/\d{4}-\d{2}-\d{2}$/.test(window.location.pathname);
+  useEffect(() => {
+    if (isDailyGameRoute) {
+      const date = window.location.pathname.split('/').pop();
+      document.title = `Swell Duel Daily Challenge — ${date} | Vawe`;
+    }
+  }, [isDailyGameRoute]);
   // Navigation & Category state
   const [category, setCategory] = useState<CategoryId>(() => {
     const path = window.location.pathname;
@@ -34,6 +49,7 @@ export default function App() {
     if (path.includes('/aircraft')) return 'AIR';
     if (path.includes('/ships')) return 'SHIPS';
     if (path.includes('/weather')) return 'WEATHER';
+    if (path === '/waves' || path.startsWith('/waves/') || path.startsWith('/buoys/')) return 'OCEAN';
     const saved = localStorage.getItem(STORAGE_KEYS.CATEGORY);
     return (saved as CategoryId) || 'OCEAN';
   });
@@ -154,7 +170,7 @@ export default function App() {
         break;
       case 'GAME':
         window.history.pushState(null, '', '/game');
-        document.title = 'Swell Duel — Live Ocean Buoy Higher or Lower Game';
+        document.title = 'VAWE Ocean Games — Live NOAA Buoy Challenges';
         break;
       case 'EARTH':
         window.history.pushState(null, '', '/earthquakes');
@@ -229,22 +245,23 @@ export default function App() {
   }, [observations, detector]);
 
   return (
-    <div className="min-h-screen bg-[#05070a] text-zinc-100 selection:bg-cyan-500/20 selection:text-cyan-200">
+    <div className={`cinematic-app min-h-screen overflow-hidden bg-[#061827] text-slate-100 selection:bg-cyan-300/30 selection:text-white ${category === 'OCEAN' ? 'ocean-page' : ''} ${category === 'WEATHER' ? 'weather-page' : ''}`}>
+      <div className="cinematic-page-glow pointer-events-none fixed inset-x-0 top-0 -z-0 h-[48rem] opacity-80" />
       {/* Top Ambient Navigation Bar */}
-      <header className="sticky top-0 z-50 border-b border-zinc-900/80 bg-[#05070a]/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-cyan-100/10 bg-[#061827]/80 backdrop-blur-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex h-[4.5rem] items-center justify-between">
             {/* Logo / Brand */}
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-950 border border-cyan-500/40 text-cyan-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-100/35 bg-cyan-100/10 text-cyan-100 shadow-[0_0_28px_rgba(103,232,249,0.22)]">
                 <Layers className="h-4 w-4" />
               </div>
               <div className="flex flex-col">
-                <span className="font-mono text-base font-black tracking-wider text-white">
-                  LIVE EVENTS
+                <span className="font-mono text-base font-black tracking-[0.16em] text-white">
+                  VAWE
                 </span>
-                <span className="text-[10px] font-mono text-zinc-400 -mt-0.5">
-                  Public Data Stream Engine
+                <span className="-mt-0.5 text-[10px] font-mono text-cyan-100/55">
+                  Ocean signal observatory
                 </span>
               </div>
             </div>
@@ -279,7 +296,7 @@ export default function App() {
       </header>
 
       {/* Main Experience Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 sm:space-y-10">
+      <main className="relative z-10 mx-auto max-w-7xl space-y-8 px-4 py-6 sm:space-y-10 sm:px-6 sm:py-8 lg:px-8">
         {/* VIEW 1: OCEAN WAVES (MVP) */}
         {category === 'OCEAN' && (
           <>
@@ -317,6 +334,8 @@ export default function App() {
               lastUpdated={lastObservationTime}
               onRefresh={() => fetchBuoyData(currentStationId, true)}
               isLoading={isLoading}
+              stationName={stationMeta?.name}
+              stationId={stationMeta?.id || currentStationId}
             />
 
             {/* GAME TEASER BANNER (Drives viral views & gameplay) */}
@@ -326,23 +345,26 @@ export default function App() {
             />
 
             {/* THRESHOLD ADJUSTER & STATION BADGE */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-              <ThresholdControl
-                threshold={threshold}
-                unit="m"
-                presets={[2.0, 2.5, 3.0, 3.5, 4.0, 5.0]}
-                step={0.25}
-                min={1.0}
-                max={10.0}
-                onChange={handleThresholdChange}
-              />
+            <div className="ocean-control-surface flex flex-col justify-between gap-4 rounded-2xl border border-cyan-100/10 bg-[#0b2a40]/70 p-4 shadow-[0_16px_40px_rgba(3,22,37,0.18)] backdrop-blur-xl sm:flex-row sm:items-center sm:p-5">
+              <div className="flex items-center gap-3">
+                <div className="hidden h-9 w-9 items-center justify-center rounded-full border border-cyan-100/20 bg-cyan-100/10 text-cyan-100 sm:flex"><Waves className="h-4 w-4" /></div>
+                <ThresholdControl
+                  threshold={threshold}
+                  unit="m"
+                  presets={[2.0, 2.5, 3.0, 3.5, 4.0, 5.0]}
+                  step={0.25}
+                  min={1.0}
+                  max={10.0}
+                  onChange={handleThresholdChange}
+                />
+              </div>
 
               {stationMeta && (
-                <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 self-start sm:self-auto">
-                  <span className="text-zinc-500">Monitoring:</span>
-                  <span className="text-zinc-200 font-semibold">{stationMeta.name}</span>
-                  <span className="text-zinc-600">·</span>
-                  <span className="text-cyan-400">NOAA #{stationMeta.id}</span>
+                <div className="flex items-center gap-2 self-start text-xs font-mono text-cyan-50/65 sm:self-auto">
+                  <span className="text-cyan-50/45">Tracking</span>
+                  <span className="font-semibold text-white">{stationMeta.name}</span>
+                  <span className="text-cyan-100/35">·</span>
+                  <span className="text-cyan-200">NOAA #{stationMeta.id}</span>
                 </div>
               )}
             </div>
@@ -381,17 +403,19 @@ export default function App() {
 
         {/* VIEW: SWELL DUEL GAME */}
         {category === 'GAME' && (
-          <BuoyDuelGame
-            onInspectBuoy={(stationId) => {
-              setCurrentStationId(stationId);
-              handleSelectCategory('OCEAN');
-            }}
-          />
+          <Suspense fallback={<RouteLoading />}>
+            {isDailyGameRoute ? <DailySwellDuel /> : <GamesHub
+              onInspectBuoy={(stationId) => {
+                setCurrentStationId(stationId);
+                handleSelectCategory('OCEAN');
+              }}
+            />}
+          </Suspense>
         )}
 
         {/* VIEW 2: EARTHQUAKES */}
         {category === 'EARTH' && (
-          <EarthquakeView />
+          <Suspense fallback={<RouteLoading />}><EarthquakeView /></Suspense>
         )}
 
         {/* VIEW 3+: UPCOMING CATEGORIES */}
@@ -404,10 +428,10 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-16 border-t border-zinc-900 py-8 font-mono text-xs text-zinc-500 text-center">
+      <footer className="relative z-10 mt-16 border-t border-cyan-100/10 py-8 text-center font-mono text-xs text-cyan-50/45">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-zinc-400">
-            <span className="font-bold text-zinc-200">LIVE EVENTS</span>
+          <div className="flex items-center gap-2 text-cyan-50/55">
+            <span className="font-bold text-cyan-50">VAWE</span>
             <span>—</span>
             <span>Live data stream event detection & real-time statistics</span>
           </div>
